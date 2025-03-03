@@ -14,6 +14,7 @@ import math
 import json
 import random
 import re
+import pickle
 
 import sys
 
@@ -181,8 +182,20 @@ def main():
     # Generate JSON output for student model (first 100 predictions)
     generate_results_json(test_set, best_probabilities, best_n, "sample.json")
 
+    sample_model = {
+        "ngram_counts": best_ngram_counts,
+        "context_counts": best_context_counts,
+        "probabilities": best_probabilities,
+        "n": best_n,
+        "vocab": vocab  # Optional: include if needed for later inference
+    }
+    with open("sample_model.pkl", "wb") as f:
+        pickle.dump(sample_model, f)
+    print("Sample model saved as 'sample_model.pkl'.")
+
+
 if __name__ == "__main__":
-	if len(sys.argv) != 2:
-		print("Usage: python ngram_model.py <your_corpus.txt>")
-	else:
-	    main()
+    if len(sys.argv) != 2:
+        print("Usage: python ngram_model.py <your_corpus.txt>")
+    else:
+        main()
