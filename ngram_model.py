@@ -7,9 +7,6 @@ Original file is located at
     https://colab.research.google.com/drive/18-c_oyjwlzgA_-kEpvavDfkOnDmzNSGD
 """
 
-from google.colab import drive
-drive.mount('/content/drive')
-
 from pygments.lexers.jvm import JavaLexer
 from pygments.token import Token
 from collections import defaultdict, Counter
@@ -18,10 +15,14 @@ import json
 import random
 import re
 
+import sys
+
+
 def tokenize_java_code(code):
     """Tokenizes Java code using Pygments."""
     lexer = JavaLexer()
     return [t[1] for t in lexer.get_tokens(code) if t[0] not in Token.Text]
+
 
 def build_ngram_model(corpus, n):
     """Builds an N-gram model from tokenized Java methods."""
@@ -31,13 +32,14 @@ def build_ngram_model(corpus, n):
     for method in corpus:
         tokens = tokenize_java_code(method)
         for i in range(len(tokens) - n + 1):
-            ngram = tuple(tokens[i:i+n])
-            context = tuple(tokens[i:i+n-1])
+            ngram = tuple(tokens[i:i + n])
+            context = tuple(tokens[i:i + n - 1])
             ngram_counts[ngram] += 1
             context_counts[context] += 1
 
     print(f"Number of N-grams: {len(ngram_counts)}")
     return ngram_counts, context_counts
+
 
 def compute_probabilities(ngram_counts, context_counts):
     """Computes conditional probabilities for N-grams."""
@@ -47,6 +49,7 @@ def compute_probabilities(ngram_counts, context_counts):
         probabilities[ngram] = count / context_counts[context]
     return probabilities
 
+
 def perplexity(test_corpus, probabilities, n):
     """Computes perplexity for the N-gram model on a test set."""
     log_prob_sum = 0
@@ -55,12 +58,13 @@ def perplexity(test_corpus, probabilities, n):
     for method in test_corpus:
         tokens = tokenize_java_code(method)
         for i in range(len(tokens) - n + 1):
-            ngram = tuple(tokens[i:i+n])
+            ngram = tuple(tokens[i:i + n])
             prob = probabilities.get(ngram, 1e-6)  # Smoothing for unseen cases
             log_prob_sum += math.log2(prob)
             N += 1
 
     return 2 ** (-log_prob_sum / N)
+
 
 def iterative_prediction_x(probabilities, context, n):
     """Predicts the next token iteratively given a starting context."""
@@ -78,12 +82,13 @@ def iterative_prediction_x(probabilities, context, n):
 
     return predictions
 
+
 def generate_results_json(test_corpus, probabilities, n, filename):
     """Generates a JSON file with token predictions and probabilities."""
     results = {}
 
     for i, method in enumerate(test_corpus[:100]):  # Limit to 100 examples
-        tokens = tokenize_java_code(method)[:n-1]
+        tokens = tokenize_java_code(method)[:n - 1]
         context = tuple(tokens)
         results[str(i)] = iterative_prediction_x(probabilities, context, n)
 
@@ -97,6 +102,7 @@ def generate_results_json(test_corpus, probabilities, n, filename):
         if first_method_predictions:
             print(f"First prediction for method 0: {first_method_predictions[0]}")
 
+
 def generate_vocabulary(corpus):
     """Generates a vocabulary from the given corpus (training + eval + test)."""
     vocab = set()
@@ -104,6 +110,7 @@ def generate_vocabulary(corpus):
         tokens = tokenize_java_code(method)
         vocab.update(tokens)
     return vocab
+
 
 def load_methods_from_file(filename):
     """
@@ -118,104 +125,10 @@ def load_methods_from_file(filename):
     methods = [method.strip() for method in methods if method.strip()]
     return methods
 
-# def main():
-#     # Load dataset from cleaned corpus (e.g., 7561 methods)
-#     with open("/content/drive/Shareddrives/CSCI_420/data/new.txt", "r") as f:
-#         corpus = [line.strip() for line in f]
 
-#     print(f"Total methods in corpus: {len(corpus)}")  # Expected: 7561 methods
-
-#     # Vocabulary Generation (using training + eval + test sets)
-#     vocab = generate_vocabulary(corpus)
-#     print(vocab)
-#     print(f"Vocabulary size: {len(vocab)}")  # ZZZ number of code tokens
-
-#     # Shuffle and split dataset: 80% training, 10% eval, 10% test
-#     random.shuffle(corpus)
-#     train_set = corpus[:int(0.8 * len(corpus))]
-#     eval_set = corpus[int(0.8 * len(corpus)):int(0.9 * len(corpus))]
-#     test_set = corpus[int(0.9 * len(corpus)):]
-
-#     print(f"Train set: {len(train_set)} methods")
-#     print(f"Eval set: {len(eval_set)} methods")
-#     print(f"Test set: {len(test_set)} methods")
-
-#     # Model Training & Evaluation on Student's Data
-#     # Experiment with n = 3, n = 5, and n = 9; select best based on perplexity
-#     best_n = None
-#     best_perplexity = float("inf")
-#     results = {}
-
-#     for n in [3, 5, 9]:
-#         print(f"Evaluating {n}-gram model on training data")
-#         ngram_counts, context_counts = build_ngram_model(train_set, n)
-#         probabilities = compute_probabilities(ngram_counts, context_counts)
-
-#         pp = perplexity(eval_set, probabilities, n)
-#         results[n] = pp
-#         print(f"{n}-gram model Perplexity on Eval set: {pp}")
-
-#         if pp < best_perplexity:
-#             best_perplexity = pp
-#             best_n = n
-
-#     print(f"Selected best N: {best_n} (Perplexity: {best_perplexity})")
-#     # According to our report, n = 3 was selected (with perplexity ~91.297)
-
-#     # Train best model on full training set
-#     best_ngram_counts, best_context_counts = build_ngram_model(train_set, best_n)
-#     best_probabilities = compute_probabilities(best_ngram_counts, best_context_counts)
-
-#     # Compute perplexity on the full test set for student model
-#     test_pp = perplexity(test_set, best_probabilities, best_n)
-#     print(f"Test set Perplexity for {best_n}-gram model: {test_pp}")  # Replace YYY.00000 with actual value
-
-#     # Generate JSON output for student model (first 100 predictions)
-#     generate_results_json(test_set, best_probabilities, best_n, "results_student_model.json")
-
-#     # Training, Evaluation, and Testing on the Instructor-Provided Corpus
-#     with open("/content/drive/Shareddrives/CSCI_420/data/training.txt", "r") as f:
-#         instructor_corpus = [line.strip() for line in f]
-
-#     print(f"Total methods in instructor's corpus: {len(instructor_corpus)}")
-#     random.shuffle(instructor_corpus)
-#     instructor_train_set = instructor_corpus[:int(0.8 * len(instructor_corpus))]
-#     instructor_eval_set = instructor_corpus[int(0.8 * len(instructor_corpus)):int(0.9 * len(instructor_corpus))]
-
-#     best_instructor_n = None
-#     best_instructor_perplexity = float("inf")
-
-#     for n in [3, 5, 9]:
-#         print(f"Evaluating {n}-gram model on instructor's training data")
-#         ngram_counts, context_counts = build_ngram_model(instructor_train_set, n)
-#         probabilities = compute_probabilities(ngram_counts, context_counts)
-
-#         pp = perplexity(instructor_eval_set, probabilities, n)
-#         print(f"{n}-gram model Perplexity on Instructor's Eval set: {pp}")
-#         if pp < best_instructor_perplexity:
-#             best_instructor_perplexity = pp
-#             best_instructor_n = n
-
-#     print(f"Best N for instructor model: {best_instructor_n} (Perplexity: {best_instructor_perplexity})")
-#     # According to our report, n = 3 was selected for the instructor corpus as well
-
-#     # Train best instructor model
-#     best_instructor_ngram_counts, best_instructor_context_counts = build_ngram_model(instructor_train_set, best_instructor_n)
-#     best_instructor_probabilities = compute_probabilities(best_instructor_ngram_counts, best_instructor_context_counts)
-
-#     # Compute perplexity on test set for instructor model
-#     instructor_test_pp = perplexity(test_set, best_instructor_probabilities, best_instructor_n)
-#     print(f"Test set Perplexity for instructor's {best_instructor_n}-gram model: {instructor_test_pp}")
-
-#     # Generate JSON output for instructor model (first 100 predictions)
-#     generate_results_json(test_set, best_instructor_probabilities, best_instructor_n, "results_teacher_model.json")
-
-# if __name__ == "__main__":
-#     main()
-
-def student_train():
+def main():
     # Load dataset from cleaned corpus (e.g., 7561 methods)
-    with open("/content/drive/Shareddrives/CSCI_420/data/new.txt", "r") as f:
+    with open(sys.argv[1], "r") as f:
         corpus = [line.strip() for line in f]
 
     print(f"Total methods in corpus: {len(corpus)}")  # Expected: 7561 methods
@@ -266,69 +179,10 @@ def student_train():
     print(f"Test set Perplexity for {best_n}-gram model: {test_pp}")  # Replace YYY.00000 with actual value
 
     # Generate JSON output for student model (first 100 predictions)
-    generate_results_json(test_set, best_probabilities, best_n, "results_student_model.json")
-
-def teacher_train():
-    # Load dataset from cleaned corpus (e.g., 7561 methods)
-    with open("/content/drive/Shareddrives/CSCI_420/data/new.txt", "r") as f:
-        corpus = [line.strip() for line in f]
-
-    # Training, Evaluation, and Testing on the Instructor-Provided Corpus
-    with open("/content/drive/Shareddrives/CSCI_420/data/training.txt", "r") as f:
-        instructor_corpus = [line.strip() for line in f]
-
-    print(f"Total methods in instructor's corpus: {len(instructor_corpus)}")
-
-    # Vocabulary Generation (using training + eval + test sets)
-    vocab = generate_vocabulary(instructor_corpus)
-    # print(vocab)
-    print(f"Vocabulary size: {len(vocab)}")  # ZZZ number of code tokens
-
-    random.shuffle(instructor_corpus)
-    test_set = corpus[int(0.9 * len(corpus)):]
-    instructor_train_set = instructor_corpus[:int(0.8 * len(instructor_corpus))]
-    instructor_eval_set = instructor_corpus[int(0.8 * len(instructor_corpus)):int(0.9 * len(instructor_corpus))]
-
-    best_instructor_n = None
-    best_instructor_perplexity = float("inf")
-
-    for n in [3, 5, 9]:
-        print(f"Evaluating {n}-gram model on instructor's training data")
-        ngram_counts, context_counts = build_ngram_model(instructor_train_set, n)
-        probabilities = compute_probabilities(ngram_counts, context_counts)
-
-        pp = perplexity(instructor_eval_set, probabilities, n)
-        print(f"{n}-gram model Perplexity on Instructor's Eval set: {pp}")
-        if pp < best_instructor_perplexity:
-            best_instructor_perplexity = pp
-            best_instructor_n = n
-
-    print(f"Best N for instructor model: {best_instructor_n} (Perplexity: {best_instructor_perplexity})")
-    # According to our report, n = 3 was selected for the instructor corpus as well
-
-    # Train best instructor model
-    best_instructor_ngram_counts, best_instructor_context_counts = build_ngram_model(instructor_train_set, best_instructor_n)
-    best_instructor_probabilities = compute_probabilities(best_instructor_ngram_counts, best_instructor_context_counts)
-
-    # Compute perplexity on test set for instructor model
-    instructor_test_pp = perplexity(test_set, best_instructor_probabilities, best_instructor_n)
-    print(f"Test set Perplexity for instructor's {best_instructor_n}-gram model: {instructor_test_pp}")
-
-    # Generate JSON output for instructor model (first 100 predictions)
-    generate_results_json(test_set, best_instructor_probabilities, best_instructor_n, "results_teacher_model.json")
-
-def main():
-    student_train()
+    generate_results_json(test_set, best_probabilities, best_n, "sample.json")
 
 if __name__ == "__main__":
-    main()
-
-def main():
-    teacher_train()
-
-if __name__ == "__main__":
-    main()
-
-from google.colab import files
-files.download('results_student_model.json')
-files.download('results_teacher_model.json')
+	if len(sys.argv) != 2:
+		print("Usage: python ngram_model.py <your_corpus.txt>")
+	else:
+	    main()
