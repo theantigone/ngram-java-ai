@@ -23,16 +23,16 @@ This project is implemented in **Python 3.9+** and is compatible with **macOS, L
 (1) Clone the repository to your workspace:  
 ```shell
 ~ $ git clone https://github.com/theantigone/ngram-java-ai.git
-
+```
 (2) Navigate into the repository:
-
+```shell
 ~ $ cd ngram-java-ai
 ~/ngram-java-ai $
-
+```
 (3) Set up a virtual environment and activate it:
 
 For macOS/Linux:
-
+```shell
 ~/ngram-java-ai $ python -m venv ./venv/
 ~/ngram-java-ai $ source venv/bin/activate
 (venv) ~/ngram-java-ai $ 
