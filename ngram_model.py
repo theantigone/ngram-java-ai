@@ -127,7 +127,7 @@ def load_methods_from_file(filename):
     return methods
 
 
-def main():
+def student_train():
     # Load dataset from cleaned corpus (e.g., 7561 methods)
     with open(sys.argv[1], "r") as f:
         corpus = [line.strip() for line in f]
@@ -180,22 +180,89 @@ def main():
     print(f"Test set Perplexity for {best_n}-gram model: {test_pp}")  # Replace YYY.00000 with actual value
 
     # Generate JSON output for student model (first 100 predictions)
-    generate_results_json(test_set, best_probabilities, best_n, "sample.json")
+    generate_results_json(test_set, best_probabilities, best_n, "results_student_model.json")
 
-    sample_model = {
+    student_model = {
         "ngram_counts": best_ngram_counts,
         "context_counts": best_context_counts,
         "probabilities": best_probabilities,
         "n": best_n,
         "vocab": vocab  # Optional: include if needed for later inference
     }
-    with open("sample_model.pkl", "wb") as f:
-        pickle.dump(sample_model, f)
-    print("Sample model saved as 'sample_model.pkl'.")
+    with open("student_model.pkl", "wb") as f:
+        pickle.dump(student_model, f)
+    print("Student model saved as 'student_model.pkl'.")
+
+
+def teacher_train():
+    # Load dataset from cleaned corpus (e.g., 7561 methods)
+    with open(sys.argv[1], "r") as f:
+        corpus = [line.strip() for line in f]
+
+    # Training, Evaluation, and Testing on the Instructor-Provided Corpus
+    with open(sys.argv[2], "r") as f:
+        instructor_corpus = [line.strip() for line in f]
+
+    print(f"Total methods in instructor's corpus: {len(instructor_corpus)}")
+
+    # Vocabulary Generation (using training + eval + test sets)
+    vocab = generate_vocabulary(instructor_corpus)
+    # print(vocab)
+    print(f"Vocabulary size: {len(vocab)}")  # ZZZ number of code tokens
+
+    random.shuffle(instructor_corpus)
+    test_set = corpus[int(0.9 * len(corpus)):]
+    instructor_train_set = instructor_corpus[:int(0.8 * len(instructor_corpus))]
+    instructor_eval_set = instructor_corpus[int(0.8 * len(instructor_corpus)):int(0.9 * len(instructor_corpus))]
+
+    best_instructor_n = None
+    best_instructor_perplexity = float("inf")
+
+    for n in [3, 5, 9]:
+        print(f"Evaluating {n}-gram model on instructor's training data")
+        ngram_counts, context_counts = build_ngram_model(instructor_train_set, n)
+        probabilities = compute_probabilities(ngram_counts, context_counts)
+
+        pp = perplexity(instructor_eval_set, probabilities, n)
+        print(f"{n}-gram model Perplexity on Instructor's Eval set: {pp}")
+        if pp < best_instructor_perplexity:
+            best_instructor_perplexity = pp
+            best_instructor_n = n
+
+    print(f"Best N for instructor model: {best_instructor_n} (Perplexity: {best_instructor_perplexity})")
+    # According to our report, n = 3 was selected for the instructor corpus as well
+
+    # Train best instructor model
+    best_instructor_ngram_counts, best_instructor_context_counts = build_ngram_model(instructor_train_set,
+                                                                                     best_instructor_n)
+    best_instructor_probabilities = compute_probabilities(best_instructor_ngram_counts, best_instructor_context_counts)
+
+    # Compute perplexity on test set for instructor model
+    instructor_test_pp = perplexity(test_set, best_instructor_probabilities, best_instructor_n)
+    print(f"Test set Perplexity for instructor's {best_instructor_n}-gram model: {instructor_test_pp}")
+
+    # Generate JSON output for instructor model (first 100 predictions)
+    generate_results_json(test_set, best_instructor_probabilities, best_instructor_n, "results_teacher_model.json")
+
+    teacher_model = {
+        "ngram_counts": best_instructor_ngram_counts,
+        "context_counts": best_instructor_context_counts,
+        "probabilities": best_instructor_probabilities,
+        "n": best_instructor_n,
+        "vocab": vocab  # Optional: include if needed for later inference
+    }
+    with open("teacher_model.pkl", "wb") as f:
+        pickle.dump(teacher_model, f)
+    print("Teacher model saved as 'teacher_model.pkl'.")
+
+
+def main():
+    student_train()
+    teacher_train()
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python ngram_model.py <your_corpus.txt>")
+    if len(sys.argv) != 3:
+        print("Usage: python ngram_model.py <student_corpus_file> <instructor_corpus_file>")
     else:
         main()

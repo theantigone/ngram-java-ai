@@ -56,7 +56,7 @@ Install the required dependencies:
 The script takes a corpus of Java methods as input and automatically identifies the best-performing model based on a specific N-value. It then evaluates the selected model on the test set extracted according to the assignment specifications.
 Since the training corpus differs from both the instructor-provided dataset and our own dataset, we store the results in a file named results_provided_model.json to distinguish them accordingly.
 
-(venv) ~/ngram-java-ai $ python ngram_model.py <insert_corpus.txt_here>
+(venv) ~/ngram-java-ai $ python ngram_model.py <student_corpus_text> <instructor_corpus_text>
 
 
 ## 3. Report
