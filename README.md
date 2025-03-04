@@ -26,7 +26,7 @@ This project is implemented in **Python 3.9+** and is compatible with **macOS, L
 
 (2) Navigate into the repository:
 
-~ $ cd ngram-java-ai.git
+~ $ cd ngram-java-ai
 ~/ngram-java-ai $
 
 (3) Set up a virtual environment and activate it:
