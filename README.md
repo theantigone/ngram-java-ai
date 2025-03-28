@@ -61,6 +61,6 @@ Since the training corpus differs from both the instructor-provided dataset and 
 
 ## 3. Report
 
-The assignment report is available in the file Assignment_Report.pdf.
+The assignment report is available inside the folder **reports** folder named **Assignment_Report.pdf**.
 
 
